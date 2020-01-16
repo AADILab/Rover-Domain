@@ -6,22 +6,21 @@ class Parameters:
     def __init__(self):
         # Run Parameters
         self.stat_runs = 1
-        self.generations = 100  # Number of generations for CCEA in each stat run
-        self.new_world_config = True  # False -> Reuse existing world config, True -> Use new world config
-        self.reward_type = "Global"  # Switch between reward functions "Global" "Difference" "DPP" "SDPP"
+        self.generations = 10  # Number of generations for CCEA in each stat run
+        self.new_world_config = 1  # 0 = False -> Reuse existing world config, 1 = True -> Use new world config
+        self.reward_type = "SDPP"  # Switch between reward functions "Global" "Difference" "DPP" "SDPP"
 
         # Visualizer
         self.running = False  # True keeps visualizer from closing until you 'X' out of window
 
         # Domain parameters
-        self.team_types = 'homogeneous'  # Switch between 'homogeneous' and 'heterogeneous' rover domains
-        self.num_rovers = 10  # Number of rovers on map (GETS MULTIPLIED BY NUMBER OF TYPES)
-        self.coupling = 3  # Number of rovers required to view a POI for credit
-        self.num_pois = 6  # Number of POIs on map
-        self.num_steps = 20  # Number of steps rovers take each episode
+        self.num_rovers = 6  # Number of rovers on map
+        self.coupling = 6  # Number of rovers required to view a POI for credit
+        self.num_pois = 2  # Number of POIs on map
+        self.num_steps = 25  # Number of steps rovers take each episode
         self.min_distance = 1.0  # Minimum distance which may appear in the denominator of credit eval functions
-        self.x_dim = 30  # X-Dimension of the rover map
-        self.y_dim = 30  # Y-Dimension of the rover map
+        self.x_dim = 30.0  # X-Dimension of the rover map
+        self.y_dim = 30.0  # Y-Dimension of the rover map
         self.min_observation_dist = 3.0  # Minimum distance rovers must be to observe POIs
         self.angle_resolution = 90  # Resolution of sensors (determines number of sectors)
         self.sensor_model = "summed"  # Should either be "density" or "closest" or "summed"
@@ -32,20 +31,21 @@ class Parameters:
         self.num_outputs = 2
 
         # CCEA parameters
-        self.mutation_prob = 0.1  # Probability that a member of the offspring population will be mutated
-        self.mutation_rate = 0.01  # Percentage of bits which get flipped in an individual
+        self.mutation_prob = 0.1  # Probability that a mutation will occur
+        self.mutation_rate = 0.05  # How much a weight is allowed to change
         self.epsilon = 0.1  # For e-greedy selection in CCEA
-        self.parent_pop_size = 15
-        self.offspring_pop_size = 5
+        self.parent_pop_size = 30
+        self.offspring_pop_size = 30
+        self.total_pop_size = self.parent_pop_size + self.offspring_pop_size
 
         # User specific parameters
         """
-        Suggestions: high_val, low_val, high_low, value_incentives, partner_proximity, or none
+        Suggestions: high_val, low_val, high_low, val_based, or none (none is standard D++)_
         """
-        self.suggestion_type = "none"
+        self.suggestion_type = "high_val"
         self.new_suggestion = "high_val"
-        self.gen_switch_point = 499  # What generation should the suggestion type switch at?
-        self.step_switch_point = 5  # What step should the suggestion type switch at?
+        self.gen_switch_point = 300  # What generation should the suggestion type switch at?
+        self.step_switch_point = 30  # What step should the suggestion type switch at?
         self.gen_suggestion_switch = False  # Switch suggestion types at a specified generation
         self.step_suggestion_switch = False  # Switch suggestion types at a specified rover step
 

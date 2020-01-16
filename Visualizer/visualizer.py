@@ -7,6 +7,7 @@ import time
 import math
 import sys
 import os
+import csv
 sys.path.append('../')
 from AADI_RoverDomain.parameters import Parameters
 
@@ -56,85 +57,67 @@ def import_rover_paths(p):
 
     return rover_paths
 
-def import_poi_positions(p):
-    poi_positions = np.zeros((p.num_pois, 2))
+def import_poi_information(p):
+    pois = np.zeros((p.num_pois, 3))
 
-    with open('../Output_Data/POI_Positions.txt') as f:
-        for i, l in enumerate(f):
-            pass
+    config_input = []
+    with open('../Output_Data/POI_Config.csv') as csvfile:
+        csv_reader = csv.reader(csvfile, delimiter=',')
 
-    line_count = i + 1
-
-    posFile = open('../Output_Data/POI_Positions.txt', 'r')
-
-    count = 1
-    coordMat = []
-
-    for line in posFile:
-        for coord in line.split('\t'):
-            if (coord != '\n') and (count == line_count):
-                coordMat.append(float(coord))
-        count += 1
-
-    prev_pos = np.reshape(coordMat, (p.num_pois, 2))
+        for row in csv_reader:
+            config_input.append(row)
 
     for poi_id in range(p.num_pois):
-        poi_positions[poi_id, 0] = prev_pos[poi_id, 0]
-        poi_positions[poi_id, 1] = prev_pos[poi_id, 1]
+        pois[poi_id, 0] = float(config_input[poi_id][0])
+        pois[poi_id, 1] = float(config_input[poi_id][1])
+        pois[poi_id, 2] = float(config_input[poi_id][2])
 
-    return poi_positions
+    return pois
 
-def import_poi_values(p):
-    poi_vals = np.zeros(p.num_pois)
-    poi_val_file = open('../Output_Data/POI_Values.txt', 'r')
+def create_output_files(filename, in_vec):
+    dir_name = 'Output_Data/'
 
-    value_mat = []
-    for line in poi_val_file:
-        for v in line.split('\t'):
-            if v != '\n':
-                value_mat.append(float(v))
+    if not os.path.exists(dir_name):  # If directory does not exist, create it
+        os.makedirs(dir_name)
 
-    values = np.reshape(value_mat, p.num_pois)
-    for poi_id in range(p.num_pois):
-        poi_vals[poi_id] = values[poi_id]
-
-    return poi_vals
+    save_file_name = os.path.join(dir_name, filename)
+    with open(save_file_name, 'a+', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(in_vec)
 
 
-def run_visualizer(episode_reward):
+def run_visualizer():
     p = Parameters()
     scale_factor = 20  # Scaling factor for images
     width = -15  # robot icon widths
-    x_map = p.x_dim + 10  # Slightly larger so POI are not cut off
-    y_map = p.y_dim + 10
+    x_map = int(p.x_dim + 10)  # Slightly larger so POI are not cut off
+    y_map = int(p.y_dim + 10)
     image_adjust = 100  # Adjusts the image so that everything is centered
     pygame.init()
-    game_display = pygame.display.set_mode((x_map*scale_factor, y_map*scale_factor))
     pygame.display.set_caption('Rover Domain')
     robot_image = pygame.image.load('./robot.png')
     background = pygame.image.load('./background.png')
-    greenflag = pygame.image.load('./greenflag.png')
-    redflag = pygame.image.load('./redflag.png')
     color_array = generate_color_array(p.num_rovers)
     pygame.font.init() 
     myfont = pygame.font.SysFont('Comic Sans MS', 30)
-    poi_status = [False for _ in range(p.num_pois)]
 
     rover_path = import_rover_paths(p)
-    poi_pos = import_poi_positions(p)
-    poi_values = import_poi_values(p)
+    pois = import_poi_information(p)
 
+    poi_convergence = [0 for i in range(p.num_pois + 1)]
     for srun in range(p.stat_runs):
+        game_display = pygame.display.set_mode((x_map * scale_factor, y_map * scale_factor))
+        poi_status = [False for _ in range(p.num_pois)]
         for tstep in range(p.num_steps):
             draw(game_display, background, 0, 0)
             for poi_id in range(p.num_pois):  # Draw POI and POI values
-                poi_x = int(poi_pos[poi_id, 0] * scale_factor) + image_adjust
-                poi_y = int(poi_pos[poi_id, 1] * scale_factor) + image_adjust
+                poi_x = int(pois[poi_id, 0] * scale_factor) + image_adjust
+                poi_y = int(pois[poi_id, 1] * scale_factor) + image_adjust
 
                 observer_count = 0
                 for rover_id in range(p.num_rovers):
-                    x_dist = poi_pos[poi_id, 0] - rover_path[srun, tstep, rover_id, 0]
-                    y_dist = poi_pos[poi_id, 1] - rover_path[srun, tstep, rover_id, 1]
+                    x_dist = pois[poi_id, 0] - rover_path[srun, tstep, rover_id, 0]
+                    y_dist = pois[poi_id, 1] - rover_path[srun, tstep, rover_id, 1]
                     dist = math.sqrt((x_dist**2) + (y_dist**2))
 
                     if dist <= p.min_observation_dist:
@@ -145,16 +128,14 @@ def run_visualizer(episode_reward):
                     poi_status[poi_id] = True
 
                 if poi_status[poi_id]:
-                    # draw(game_display, greenflag, poi_x, poi_y)  # POI observed
                     pygame.draw.circle(game_display, (50, 205, 50), (poi_x, poi_y), 10)
-                    pygame.draw.circle(game_display, (255, 255, 255), (poi_x, poi_y), 3 * scale_factor, 1)
+                    pygame.draw.circle(game_display, (0, 0, 0), (poi_x, poi_y), int(p.min_observation_dist * scale_factor), 1)
                 else:
-                    # draw(game_display, redflag, poi_x, poi_y)  # POI not observed
                     pygame.draw.circle(game_display, (220, 20, 60), (poi_x, poi_y), 10)
-                    pygame.draw.circle(game_display, (255, 255, 255), (poi_x, poi_y), 3 * scale_factor, 1)
-                textsurface = myfont.render(str(poi_values[poi_id]), False, (255, 255, 255))
-                target_x = int(poi_pos[poi_id, 0]*scale_factor) + image_adjust
-                target_y = int(poi_pos[poi_id, 1]*scale_factor) + image_adjust
+                    pygame.draw.circle(game_display, (0, 0, 0), (poi_x, poi_y), int(p.min_observation_dist * scale_factor), 1)
+                textsurface = myfont.render(str(pois[poi_id, 2]), False, (0, 0, 0))
+                target_x = int(pois[poi_id, 0]*scale_factor) + image_adjust
+                target_y = int(pois[poi_id, 1]*scale_factor) + image_adjust
                 draw(game_display, textsurface, target_x, target_y)
 
             for rov_id in range(p.num_rovers):  # Draw all rovers and their trajectories
@@ -179,9 +160,13 @@ def run_visualizer(episode_reward):
             pygame.display.update()
             time.sleep(0.1)
 
-        scoresurface = myfont.render('The system reward obtained is ' + str(round(episode_reward, 2)), False, (0, 0, 0))
-        draw(game_display, scoresurface, x_map*scale_factor-500, 20)
-        pygame.display.update()
+        counter = 0
+        for poi_id in range(p.num_pois):
+            if poi_status[poi_id]:
+                poi_convergence[poi_id] += 1
+                counter += 1
+        if counter == 0:
+            poi_convergence[p.num_pois] += 1
 
         dir_name = 'Screenshots/'  # Intended directory for output files
         if not os.path.exists(dir_name):  # If Data directory does not exist, create it
@@ -195,5 +180,7 @@ def run_visualizer(episode_reward):
                 if event.type == pygame.QUIT:
                     p.running = False
 
+    create_output_files('POI_Choice.csv', poi_convergence)
 
-run_visualizer(20)
+
+run_visualizer()

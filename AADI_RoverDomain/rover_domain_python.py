@@ -44,14 +44,14 @@ class RoverDomain:
         :return: none
         """
 
-        if self.create_new_world_config == True:
+        if self.create_new_world_config == 1:
             # Initialize rover positions
             self.rover_pos = init_rover_pos_random_concentrated(self.nrovers, self.world_x, self.world_y)
             self.rover_initial_pos = self.rover_pos.copy()  # Track initial setup
 
             # Initialize POI positions and values
             self.poi_pos = init_poi_pos_circle(self.n_pois, self.world_x, self.world_y)
-            self.poi_values = init_poi_vals_half_and_half(self.n_pois)
+            self.poi_values = init_poi_vals_random(self.n_pois)
             self.save_world_configuration()
         else:
             # Initialize rover positions
@@ -159,7 +159,10 @@ class RoverDomain:
             self.rover_path[self.istep, rover_id, 2] = self.rover_pos[rover_id, 2]
 
         # Computes done
-        done = int(self.istep >= self.rover_steps)
+        if self.istep >= self.rover_steps:
+            done = 1
+        else:
+            done = 0
 
         joint_state = self.get_joint_state()
 
